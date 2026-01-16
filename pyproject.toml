@@ -1,7 +1,7 @@
 [project]
-name = "myclo"
+name = "ai-stylist-agent"
 version = "0.1.0"
-description = "옷 이미지 특징 추출 앱 - Flask API 서버"
+description = "AI Stylist Agent - 옷 이미지 특징 추출 앱 - Flask API 서버"
 requires-python = ">=3.11"
 dependencies = [
     "Flask>=3.0.0",

@@ -1,4 +1,4 @@
-# MyClo - 옷 이미지 특징 추출 앱
+# AI Stylist Agent - 옷 이미지 특징 추출 앱
 
 React + Vite 기반의 옷 이미지 특징 추출 웹 애플리케이션입니다. Gemini API를 사용하여 이미지에서 옷의 특징을 자동으로 추출하고 JSON 형식으로 저장합니다.
 
@@ -21,7 +21,7 @@ React + Vite 기반의 옷 이미지 특징 추출 웹 애플리케이션입니�
 ### 프론트엔드 실행
 
 ```bash
-cd MyClo
+cd ai-stylist-agent
 npm install
 npm run dev
 ```
@@ -78,7 +78,7 @@ pip install -r requirements.txt
 3. Gemini API 키 설정:
 
 **방법 1: .env 파일 사용 (권장)**
-MyClo 디렉토리에 `.env` 파일을 생성하고 다음 내용을 추가하세요:
+프로젝트 디렉토리에 `.env` 파일을 생성하고 다음 내용을 추가하세요:
 ```
 GEMINI_API_KEY=your_api_key_here
 ```

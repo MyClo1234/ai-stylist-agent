@@ -17,7 +17,7 @@ const Login = () => {
                 className="z-10"
             >
                 <div className="mb-12">
-                    <h1 className="text-5xl font-black tracking-tighter mb-2">MyClo.</h1>
+                    <h1 className="text-5xl font-black tracking-tighter mb-2">AI Stylist Agent</h1>
                     <p className="text-xl text-text-muted">Your intelligent wardrobe.</p>
                 </div>
 
