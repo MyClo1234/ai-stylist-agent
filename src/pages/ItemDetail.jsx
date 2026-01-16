@@ -28,7 +28,7 @@ const ItemDetail = () => {
     ];
 
     return (
-        <div className="min-h-screen pb-8 relative">
+        <div className="min-h-screen pb-6 pt-20 relative">
             {/* Header Image Area */}
             <div className="w-full h-[50vh] relative">
                 <img
@@ -42,15 +42,22 @@ const ItemDetail = () => {
                 <div className="absolute top-0 left-0 right-0 p-6 pt-12 flex justify-between items-center z-10">
                     <button
                         onClick={() => navigate(-1)}
-                        className="w-10 h-10 glass rounded-full flex-center text-white hover:bg-white/20 transition-colors"
+                        className="w-10 h-10 glass rounded-full flex-center text-white hover:bg-white/20 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-transparent"
+                        aria-label="Go back"
                     >
                         <ArrowLeft size={20} />
                     </button>
                     <div className="flex gap-2">
-                        <button className="w-10 h-10 glass rounded-full flex-center text-white hover:bg-white/20 transition-colors">
+                        <button 
+                            className="w-10 h-10 glass rounded-full flex-center text-white hover:bg-white/20 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-transparent"
+                            aria-label="Share item"
+                        >
                             <Share2 size={20} />
                         </button>
-                        <button className="w-10 h-10 glass rounded-full flex-center text-white hover:bg-white/20 transition-colors">
+                        <button 
+                            className="w-10 h-10 glass rounded-full flex-center text-white hover:bg-white/20 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-transparent"
+                            aria-label="Add to favorites"
+                        >
                             <Heart size={20} />
                         </button>
                     </div>
