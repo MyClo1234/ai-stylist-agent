@@ -54,26 +54,49 @@ const OutfitDetail = () => {
                 throw new Error('Outfit items not found');
             }
 
-            // Get outfit recommendation score
-            const recommendResponse = await fetch(
-                `${API_BASE_URL}/api/recommend/outfit?count=1&use_gemini=false`
-            );
+            // Get outfit recommendation score using dedicated endpoint
             let score = 85; // Default score
             let reasoning = '';
             let styleDescription = '';
+            let reasons = [];
 
-            if (recommendResponse.ok) {
-                const recommendData = await recommendResponse.json();
-                if (recommendData.outfits && recommendData.outfits.length > 0) {
-                    const recommended = recommendData.outfits.find(
-                        o => o.top.id === topId && o.bottom.id === bottomId
-                    );
-                    if (recommended) {
-                        score = Math.round(recommended.score * 100);
-                        reasoning = recommended.reasoning || '';
-                        styleDescription = recommended.style_description || '';
+            try {
+                const scoreResponse = await fetch(
+                    `${API_BASE_URL}/api/outfit/score?top_id=${topId}&bottom_id=${bottomId}`
+                );
+                if (scoreResponse.ok) {
+                    const scoreData = await scoreResponse.json();
+                    if (scoreData.success) {
+                        score = scoreData.score_percent || Math.round(scoreData.score * 100);
+                        reasons = scoreData.reasons || [];
+                        reasoning = reasons.join(', ') || '';
                     }
                 }
+            } catch (err) {
+                console.warn('Failed to fetch outfit score:', err);
+            }
+
+            // Try to get style description from recommendation if available
+            try {
+                const recommendResponse = await fetch(
+                    `${API_BASE_URL}/api/recommend/outfit?count=5&use_gemini=true`
+                );
+                if (recommendResponse.ok) {
+                    const recommendData = await recommendResponse.json();
+                    if (recommendData.outfits && recommendData.outfits.length > 0) {
+                        const recommended = recommendData.outfits.find(
+                            o => o.top.id === topId && o.bottom.id === bottomId
+                        );
+                        if (recommended) {
+                            styleDescription = recommended.style_description || '';
+                            if (recommended.reasoning && !reasoning) {
+                                reasoning = recommended.reasoning;
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('Failed to fetch style description:', err);
             }
 
             setOutfit({
@@ -83,6 +106,7 @@ const OutfitDetail = () => {
                 score: score,
                 reasoning: reasoning,
                 styleDescription: styleDescription,
+                reasons: reasons,
                 items: [
                     {
                         id: topItem.id,

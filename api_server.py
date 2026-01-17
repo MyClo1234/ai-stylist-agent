@@ -167,12 +167,60 @@ def _repair_json_like(s: str) -> str:
         s = s.replace("'", '"')
     return s
 
-def parse_json_from_text(text: str) -> Tuple[Optional[Dict[str, Any]], str]:
+def _first_balanced_json_array(s: str) -> Optional[str]:
+    """Return the first balanced [...] JSON array substring found in s."""
+    s = s.strip()
+    start = s.find("[")
+    if start == -1:
+        return None
+
+    depth = 0
+    in_str = False
+    esc = False
+    for i in range(start, len(s)):
+        ch = s[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        else:
+            if ch == '"':
+                in_str = True
+                continue
+            if ch == "[":
+                depth += 1
+            elif ch == "]":
+                depth -= 1
+                if depth == 0:
+                    return s[start:i+1]
+    return None
+
+def parse_json_from_text(text: str) -> Tuple[Optional[Any], str]:
+    """
+    Parse JSON from text, supporting both dict and list.
+    Returns: (parsed_object or None, repaired_text)
+    """
+    # Try to find JSON array first (for recommendations)
+    array_candidate = _first_balanced_json_array(text)
+    if array_candidate:
+        repaired = _repair_json_like(array_candidate)
+        try:
+            obj = json.loads(repaired)
+            if isinstance(obj, list):
+                return obj, repaired
+        except Exception:
+            pass
+    
+    # Try to find JSON object (for attribute extraction)
     candidate = _first_balanced_json_object(text) or text
     repaired = _repair_json_like(candidate)
     try:
         obj = json.loads(repaired)
-        if isinstance(obj, dict):
+        if isinstance(obj, (dict, list)):
             return obj, repaired
         return None, repaired
     except Exception:
@@ -682,6 +730,29 @@ def extract():
         if file.filename == '':
             return jsonify({"error": "No file selected"}), 400
 
+        # File size validation (max 10MB)
+        MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+        file.seek(0, os.SEEK_END)
+        file_size = file.tell()
+        file.seek(0)
+        
+        if file_size > MAX_FILE_SIZE:
+            return jsonify({"error": f"File size exceeds maximum allowed size (10MB). Your file is {file_size / (1024*1024):.1f}MB"}), 400
+        
+        # File type validation
+        ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+        ALLOWED_MIME_TYPES = {'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'}
+        
+        filename = file.filename.lower()
+        file_ext = os.path.splitext(filename)[1]
+        mime_type = file.content_type
+        
+        if file_ext not in ALLOWED_EXTENSIONS:
+            return jsonify({"error": f"Invalid file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"}), 400
+        
+        if mime_type and mime_type not in ALLOWED_MIME_TYPES:
+            return jsonify({"error": f"Invalid MIME type. Allowed: {', '.join(ALLOWED_MIME_TYPES)}"}), 400
+
         image_bytes = file.read()
         attributes = extract_attributes(image_bytes)
         
@@ -689,8 +760,13 @@ def extract():
         output_dir = "extracted_attributes"
         os.makedirs(output_dir, exist_ok=True)
         
+        # Use milliseconds and random suffix to prevent collisions
+        import time
+        import random
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        base_id = f"attributes_{timestamp}"
+        milliseconds = int(time.time() * 1000) % 1000
+        random_suffix = random.randint(1000, 9999)
+        base_id = f"attributes_{timestamp}_{milliseconds:03d}_{random_suffix}"
         
         # Save JSON
         json_filename = f"{output_dir}/{base_id}.json"
@@ -897,9 +973,19 @@ JSON only, no markdown."""
                 "reasons": []
             } for c in top_candidates_list[:count]]
         
-        # Convert to list if single object
+        # Ensure parsed is a list
         if isinstance(parsed, dict):
             parsed = [parsed]
+        elif not isinstance(parsed, list):
+            # Fallback if parsed is neither dict nor list
+            return [{
+                "top": c["top"],
+                "bottom": c["bottom"],
+                "score": c["score"],
+                "reasoning": "규칙 기반 추천",
+                "style_description": f"{c['top'].get('attributes', {}).get('category', {}).get('sub', 'Top')} & {c['bottom'].get('attributes', {}).get('category', {}).get('sub', 'Bottom')}",
+                "reasons": []
+            } for c in top_candidates_list[:count]]
         
         # Step 6: Map back to full item objects and cache
         result = []
@@ -951,6 +1037,40 @@ JSON only, no markdown."""
                 })
         candidates.sort(key=lambda x: x["score"], reverse=True)
         return candidates[:count]
+
+@app.route('/api/outfit/score', methods=['GET'])
+def get_outfit_score():
+    """Calculate outfit score for a specific top-bottom combination"""
+    try:
+        top_id = request.args.get('top_id')
+        bottom_id = request.args.get('bottom_id')
+        
+        if not top_id or not bottom_id:
+            return jsonify({"error": "top_id and bottom_id are required"}), 400
+        
+        # Load all items
+        all_items = load_wardrobe_items()
+        
+        # Find the items
+        top_item = next((item for item in all_items if item.get("id") == top_id), None)
+        bottom_item = next((item for item in all_items if item.get("id") == bottom_id), None)
+        
+        if not top_item or not bottom_item:
+            return jsonify({"error": "Items not found"}), 404
+        
+        # Calculate score
+        score, reasons = calculate_outfit_score(top_item, bottom_item)
+        
+        return jsonify({
+            "success": True,
+            "score": round(score, 3),
+            "score_percent": round(score * 100),
+            "reasons": reasons,
+            "top": top_item,
+            "bottom": bottom_item
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/recommend/outfit', methods=['GET'])
 def recommend_outfit():

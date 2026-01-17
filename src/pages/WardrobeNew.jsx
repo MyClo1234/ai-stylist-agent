@@ -19,9 +19,32 @@ const WardrobeNew = () => {
     const dropZoneRef = useRef(null);
 
     const handleFiles = (fileList) => {
-        const imageFiles = Array.from(fileList).filter(file => file.type.startsWith('image/'));
+        const MAX_FILES = 20; // Maximum number of files per upload
+        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
+        const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        
+        const imageFiles = Array.from(fileList).filter(file => {
+            // Check file type
+            if (!file.type.startsWith('image/') && !ALLOWED_TYPES.includes(file.type)) {
+                return false;
+            }
+            // Check file size
+            if (file.size > MAX_FILE_SIZE) {
+                setError(`파일 크기 제한: ${file.name} (${(file.size / (1024*1024)).toFixed(1)}MB)는 10MB를 초과합니다.`);
+                return false;
+            }
+            return true;
+        });
+        
         if (imageFiles.length === 0) {
-            setError('이미지 파일만 업로드 가능합니다.');
+            setError('이미지 파일만 업로드 가능합니다. (JPG, PNG, GIF, WEBP, 최대 10MB)');
+            return;
+        }
+        
+        // Check total file count limit
+        const currentFileCount = files.length;
+        if (currentFileCount + imageFiles.length > MAX_FILES) {
+            setError(`최대 ${MAX_FILES}개까지 업로드 가능합니다. (현재: ${currentFileCount}개)`);
             return;
         }
         
